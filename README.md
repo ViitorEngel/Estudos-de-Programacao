@@ -1,0 +1,1 @@
+Anotações gerais que fiz sobre programação ou assuntos relacionados durante meus estudos.

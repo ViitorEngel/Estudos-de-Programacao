@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>botoes</title>
+</head>
+
+<body>
+    <!--criamos um botão que vai ter uma animação massa, e atribumos a ele um hiperlink para irmos ao google-->
+    <a href="https://www.google.com">
+        <button>botão massa</button>
+    </a>
+    
+    <br><br>
+
+    <!--também podemos desabilitar o botão, se quisermos-->
+    <a href="https://www.google.com">
+        <button disabled>botão massa</button>
+    </a>
+
+    <br><br>
+
+    <!--botando corzinha-->
+    <a href="https://www.google.com">
+        <button style="background-color: darkmagenta;color: aliceblue;border-radius: 10px;border-color: blueviolet;">
+            botão massa
+        </button>
+    </a>
+
+    <br><br>
+
+    <!--fazendo um script de javascript bem estúpido só pra brincar com o botão (não se preocupe em entender isso por hora, é só pra brincar mesmo)-->
+    <button onclick="facaalgo()" style="background-color: darkmagenta;color: aliceblue;border-radius: 10px;border-color: blueviolet;">
+        botão com javascript
+    </button>
+    <p id="teste">Ola</p>
+    <script>
+        function facaalgo(){
+            document.getElementById("teste").innerHTML = "Tchau"
+        }
+    </script>
+
+</body>
+
+</html>

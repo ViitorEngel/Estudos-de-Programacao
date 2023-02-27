@@ -1,0 +1,23 @@
+LINK: https://youtu.be/HD13eq_Pmp8
+
+Todo o conte�do do curso � demonstrado de forma pr�tica nos coment�rios dos c�digos. 
+
+Para iniciar o servidor local no VS Code, clique com o bot�o direito sobre o arquivo e ent�o "Open With Live Server".
+
+Leia os arquivos na ordem:
+1 - index
+2 - hiperlink
+3 - imagens
+4 - audio
+5 - video
+6 - text_formating
+7 - listas
+8 - tables
+9 - colors
+10 - span
+11 - meta_tags
+12 - iframes
+13 - botoes
+14 - forms
+
+Além disso, no final do curso apliquei os conhecimentos no meu_primeiro_site
