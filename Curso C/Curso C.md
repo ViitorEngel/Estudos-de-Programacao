@@ -844,6 +844,48 @@ Podemos então utilizar a strncpy()m que faz esta checagem.
 Não esqueça do string.h
 
 # Comparando strings
+
 strcmp(st1, str2), vai ficar comparando as duas strings até encontrar alguma diferença ou uma string acabar, retornando <0 se a primeira string for menor que a segundo, >0 se a segunda for menor que a primeira, ou 0 se forem iguais;
 
 já a strncmp(str1, str2, n) fará  mesmo, mas somente até um índice específico determinado por n.
+
+# String Searching and Tokenization
+
+- strchr(): locate first occurrance of a character in a string
+- strstr(): locate substring
+- strtok(): split string into tokens
+
+# Analyzing Strings
+
+include ctype.h
+
+vendo o tipo:
+```C
+//return_func func (parameter);
+int islower(int c);
+int isupper(int c);
+int isalpha(int c); //checa se é alfabético
+int isalnum(int c); //checa se é alfanumerico
+int isdigit(int c); //checa se é um digito decimal
+int isxfigit(int c); //checa se é um digito hexadecimal
+int iscntrl(int c); //checa se é um caráctere de controlew
+int isprint(int c); //checa se é um caractere printável
+int isspace(int c);
+int ispunct(int c);
+```
+
+convertendo entre upper e lower:
+```C
+int tolower(int c);
+int toupper(int c);
+```
+
+convertendo strings para numeros (stdlib.h):
+```C
+int atoi (const char *str); //string to int
+long int atol (const char *str);
+double int atof(const char *str);
+double strtod(const char *str, char **endptr);
+long int strtol(const char *str, char **endptr, int base);
+```
+Observe que somente as duas últimas irão retornar uma mensagem derro caso a conversão não dê certo.
