@@ -889,3 +889,20 @@ double strtod(const char *str, char **endptr);
 long int strtol(const char *str, char **endptr, int base);
 ```
 Observe que somente as duas últimas irão retornar uma mensagem derro caso a conversão não dê certo.
+
+ex de código:
+```C
+#include <stdio.h>
+#inclide <stdlib.h>
+#inclide <stdbool.h>
+
+int main()
+{
+char str[]="123456";
+char *pend;
+
+long num = strtol(str, &pend, 10); //convertendo o str, com o ponteiro pend, em base 10, para a variável num (que será uma long int)
+
+printf("Conversion: %ld\n",num);//printando a long int convertida
+}
+```
