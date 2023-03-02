@@ -906,3 +906,60 @@ long num = strtol(str, &pend, 10); //convertendo o str, com o ponteiro pend, em 
 printf("Conversion: %ld\n",num);//printando a long int convertida
 }
 ```
+
+# Dynamic Memory Allocation
+
+Em linguagens de alta abstração, não se tem controle sobre a memória, mas não em C.
+A memória dos programas em C é dividida em 3 partes:
+- Static: variáveis globais ou estáticas, permanece durante toda a duração do programa.
+
+- Stack: variáveis locais e argumentos de funções, automaticamente gerenciada pelo compilador. Todas as variáveis que permanece aqui tem seu tempo de vida limitado pelo tempo de vida da função que a inicializou. O que pode acontecer aqui é o chamado stack overflow (o evento que dá o nome do lugar onde a gente faz pergunta estúpida pro sênior), onde o stack fica sem espaço pra alocar mais variáveis, o que é um problemão.
+
+- Heap: Um tantão de memória que pode ser utilizado dinamicamente, sendo controlada pelo programador. Tome cuidado com memory leaks, onde alocamos dados no heap durante uma função, mas esquecemos de dealocar, e todas as vezes que chamamos uma função estamos inundando (*ba dum tss*) a RAM.
+
+Podemos fazer a alocação com:
+```C
+void *malloc(size_t size) //aloca memória
+void *calloc(size_t nume, size_t size) //aloca array de elementos
+void *realloc(void *ptr, size_t new_size) //realoca a memória
+void free(void *ptr) //libera a memória
+```
+
+Malloc vai alocar "size" bytes de memória não utilizada. Se alocar com sucesso, vai retornar um ponteiro apontando pro começa da memória alocada, se der ruim, retorna um null pointer. Ex:
+```C
+#include <stdio.h>
+#include <stdlib.h>
+int main(){
+    int *p1 = malloc (4*sizeof(int)); //aloca um espaço pra uma array de 4 ints  
+
+    for (int i=0; i<4; i++){ //populando a array
+        p1[i] = i*i;
+    }
+
+    for (int i=0; i<4; i++){ //printando esta array
+        printf("p1[%d] = %d\n", i, p1[i]);
+    }
+
+    free(p1); //liberando a memória alocada pra evitar memory leak
+}
+```
+
+Tome muito cuidado com a função free, porque se passar um espaço da memória que já foi dalocado, o seu comportamente é indefinido. Normalmente, o programa vai crashar.
+
+Calloc, exemplo:
+```C
+#include <stdio.h>
+#include <stdlib.h>
+int main(){
+    int *p1 = calloc (4, sizeof(int)); //aloca um espaço pra uma array de 4 ints
+
+    for (int i=0; i<4; i++){ //printando esta array
+        printf("p1[%d] = %d\n", i, p1[i]);
+    }
+
+    free(p1); //liberando a memória alocada pra evitar memory leak
+ 
+    return EXIT_SUCCESS;
+}
+```
+Observe que como não estamos populando a array, e por padrão a função irá colocar 0 em todo, iremos printar 0.
