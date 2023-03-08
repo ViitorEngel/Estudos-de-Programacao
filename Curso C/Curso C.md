@@ -605,6 +605,8 @@ const int *ptr = &data -> Nunca conseguiremos mudar o valor de data pelo ponteir
 const int *const prt = &data -> Nunuca conseguiremos mudar o endereço nem o valor de data
 ```
 
+Se ainda estiver confuso: https://youtu.be/2ybLD6_2gKM
+
 # Ponteiros e Funções
 
 Observe o código:
@@ -659,6 +661,7 @@ Veja que estamos alterando diretamente o valor das variáveis por estarmos utili
 - O programa funciona, mas alguns fatores a se levar em consideração:
 	- A função swap, como não retorna nenhum valor, pode ser uma void, e não necessariamente uma int;
 	- Como os endereços não mudam, podemos definir os endereços dos ponteiros como constantes nos parâmetros da função.
+- Se estiver confuso: https://youtu.be/qz_iz_PLorc
 
 # Arrays
 
@@ -963,3 +966,47 @@ int main(){
 }
 ```
 Observe que como não estamos populando a array, e por padrão a função irá colocar 0 em todo, iremos printar 0.
+
+# Structures
+
+Ao invés de simplesmente sairmos declarando um monte de variáveis soltas, podemos declará-las dentro de uma struct, estruturando melhor o código, ex:
+```C
+//Definindo a struct
+struct Cartesian_dot{
+	char *name;
+	int dimensions;
+	double position[MAX_DIMENSIONS];
+	bool active;
+};
+
+//Declarando elementos a partir desta struct:
+struct Cartesian_dot dot1;
+dot1.name = "particle1";
+dot1.active = true;
+dot1.dimensions = 2
+dot1.position[0]=2; 
+dot1.position[1]=5;
+```
+Desta forma, podemos criar quantos pontos quisermos sem termos que criar um monte de variáveis, isto deixa o código mais escalável e legível. Veja que podemos ainda colocar a struct dentro de um typedef, e então não seria necessário, ao declarar um novo ponto, colocar "struct" na frente, o que deixa o código mais legível.
+Podemos ainda fazer nested structs, com structs dentro de structs, por exemplo, podemos ter uma struct chamada "Plane", e dentro desta struct, colocar a struct "Cartesian_Dot", criando assim diferentes planos com diferentes pontos.
+
+Mas este jeito de iniciar structs é meio ruim, podemos fazer de outras maneiras (tendo a struct dentro de um typedef chamado Dot):
+```C
+Dot dot1={
+	"particle1",
+	true,
+	2,
+	{2,5},
+}
+```
+Observe que desta forma, os elementos devem ser declarados na mesma ordem que na struct/typedef
+
+Outra forma (veja que esta é bem mais legível):
+```C
+Dot dot1={
+	.name="particle1",
+	.active=true,
+	.dimensions=2,
+	.position={2,5},
+}
+```
