@@ -916,7 +916,7 @@ Em linguagens de alta abstração, não se tem controle sobre a memória, mas n�
 A memória dos programas em C é dividida em 3 partes:
 - Static: variáveis globais ou estáticas, permanece durante toda a duração do programa.
 
-- Stack: variáveis locais e argumentos de funções, automaticamente gerenciada pelo compilador. Todas as variáveis que permanece aqui tem seu tempo de vida limitado pelo tempo de vida da função que a inicializou. O que pode acontecer aqui é o chamado stack overflow (o evento que dá o nome do lugar onde a gente faz pergunta estúpida pro sênior), onde o stack fica sem espaço pra alocar mais variáveis, o que é um problemão.
+- Stack: variáveis locais e argumentos de funções, automaticamente gerenciada pelo compilador. Todas as variáveis que permanece aqui tem seu tempo de vida limitado pelo tempo de vida da função que a inicializou. O que pode acontecer aqui é o chamado stack overflow (o evento que dá o nome do lugar onde a gente faz pergunta estúpida pra programador sênior), onde o stack fica sem espaço pra alocar mais variáveis, o que é um problemão.
 
 - Heap: Um tantão de memória que pode ser utilizado dinamicamente, sendo controlada pelo programador. Tome cuidado com memory leaks, onde alocamos dados no heap durante uma função, mas esquecemos de dealocar, e todas as vezes que chamamos uma função estamos inundando (*ba dum tss*) a RAM.
 
@@ -967,6 +967,8 @@ int main(){
 ```
 Observe que como não estamos populando a array, e por padrão a função irá colocar 0 em todo, iremos printar 0.
 
+Isso é útil pq nem sempre sabemos o tamanho de uma matriz com precisão, e alocação dinâmica nos permite a ir criando "on the run". Além disso, é útil quando queremos que uma variável de uma determinado escopo não seja deletada quando aquele escopo é encerrado.
+
 # Structures
 
 Ao invés de simplesmente sairmos declarando um monte de variáveis soltas, podemos declará-las dentro de uma struct, estruturando melhor o código, ex:
@@ -1008,5 +1010,61 @@ Dot dot1={
 	.active=true,
 	.dimensions=2,
 	.position={2,5},
+}
+```
+
+Além disso, possuímos também os chamados bit fields, que nos permite escolher dentro da struct o tamanho de um determinado tipo. Isto é muito útil em sistemas embarcados, porque nos permite fazer um código econômico em memória:
+```C
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+typedef struct LedStatus{ //struct normal, odne cada elemento tem 8 bits, dando um total de 3 bytes (veja tbm que estamos utilizando um bem bolado entre typedef e struct)
+    uint8_t led1;
+    uint8_t led2;
+    uint8_t led3;
+} LedStatus;  
+
+typedef struct LedStatusBitField //struct com bit field, onde cada elemento terá somente 1 bit, dando um total de 1 byte (na verdade menos, mas o interpretador utiliza 1 byte inteiro)
+{
+    uint8_t led1 : 1;
+    uint8_t led2 : 1;
+    uint8_t led3 : 1;
+} LedStatusBitField;
+
+int main()
+{
+    printf("%lld\n",sizeof(LedStatus)); //irá printar 3
+    printf("%lld\n",sizeof(LedStatusBitField)); //irá printar 1
+    return EXIT_SUCCESS;
+}
+```
+
+Também podemos criar arrays de elementos de struct, bem como ponteiros, mas com ponteiros a coisa fica um pouco diferente, pq temos o ponteiro apontando para a struct em si, e para os elementos, podemos utilizar o "arrow operator" (->), exemplo de código:
+```C
+#include <stdio.h>
+#include <stdlib.h>
+
+//criando uma struct
+struct coordenadas{
+    int x,y;
+};
+int main()
+{  
+    //criando as coordenadas do ponto1
+    struct coordenadas ponto1;
+    //declarando o ponteiro da struct coordeanas
+    struct coordenadas *pt;
+    //determinando o endereço para o qual o ponteiro da struct irá apontar
+    pt = &ponto1; 
+
+    //populando a struct
+    pt -> x=5; //com arrow operator
+    (*pt).y=10; //sem arrow operator
+
+    //printnando so valores
+    printf("%d\n",pt->x); //com arrow operator
+    printf("%d\n",(*pt).y); //sem arrow operator
+  
+    return EXIT_SUCCESS;
 }
 ```
