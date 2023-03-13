@@ -1068,3 +1068,35 @@ int main()
     return EXIT_SUCCESS;
 }
 ```
+
+Uma coisa que podemos fazer é criar uma função e e declarar a struct dentro dela, então na main igualarmos ela a uma struct. Observe que aí teremos duas structs, se trabalharmos com structs muito grandes, isto pode ocupar muita memória, então podemos declarar a struct como ponteiro, alocar ela dinamicamente, e retornar este ponteiro, poupando memória.
+
+Quando for colocar uma string dentro uma struct, utilize ponteiros para declarar aquela variável. Além de ocupar menos memória e ser mais rápido, é mais fácil de realocar um valor ali. Basta fazer:
+```C
+nome_da_struct.nome_do_parametro = "Nova string";
+```
+Se não declarar esta variável como ponteiro dentro da struct, a unica maneira de alterar seu valor será utilizando strncpy().
+
+Apenas podemos criar uma array dinâmica dentro de uma struct quando ela for o último elemento da struct.
+
+# Unions
+
+Um tipo bizonho de dado que nos permite salvar dois tipos diferentes de dados num mesmo lugar da memória.
+
+Isso pode ser útil, por exemplo, podemos construir uma mensagem bit a bir numa struct. Quando formos enviar a mensagem, não queremos enviar bit a bit, mas sim o byte inteiro, então utilizamos unions, ex:
+```C
+typedef struct{
+	uint8_t enable : 1;
+	uint8_t readey: 1;
+	uint8_t mode : 2;
+	uint8_t info: 2;
+} RegBits;
+
+typedef union{
+	RegBits bits;
+	uint8_t byte;
+} RegisterInfo
+```
+Desta forma, podemos nos referir ao byte, e teremos a mensagem inteira, sem termos que ir bit a bit da struct.
+
+É para isto que servem unions, podemos tanto manipular e ler um registrador bit a bit, quanto manipulá-lo ou acessá-lo como um todo.
