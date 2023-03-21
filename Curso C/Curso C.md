@@ -1100,3 +1100,202 @@ typedef union{
 Desta forma, podemos nos referir ao byte, e teremos a mensagem inteira, sem termos que ir bit a bit da struct.
 
 É para isto que servem unions, podemos tanto manipular e ler um registrador bit a bit, quanto manipulá-lo ou acessá-lo como um todo.
+
+# Macros
+
+Um preprocessor não é compilada, na realidade ele simplesmente faz uma substituição de texto. Ele pré-processa o código antes dele ser compilado, como o include e o define.
+
+Alguns preprocessors (==Não esqueça do "#" na frente"==):
+- define: macro de substituição
+- include: importa cabeçalhos de outros arquivos
+- undef: undefine o macro de substituição
+- ifdef: retorna true se o macro foi definido
+- ifndef: retorna true se o macro não foi definido
+- if: testa se uma condição de tempo de compilação é true
+- else: alternativa ao if
+- elif: tu já entendeu, né?
+- endif: encerra a condicionar do preprocessor
+- error: printa mensagem de erro no stderr
+- pragma: manda comandos especiais pro compilador
+
+Assim, podemos fazer uma espécie de compilação condicional, o que é bem massa.
+
+Também temos alguns macros predefinidos:
+- ______DATE______ : Retorna a data
+- ______TIME______ : Retorna a hora
+- ______FILE______ : O nome do arquivo
+- ______LINE______ : A linha do código
+- ______STDC______ : Equivale a 1 se o código for compilado com o padrão ANSI
+
+Uma parada muito legal que dá pra fazer são macros que parece funções. Um exemplo, é que não dá pra criar uma função que calcula o tamanho de uma array, pq precisamos descrever seu tipo e tamanho nos argumentos, o que já inutiliza completamente a sua usabilidade. Mas, podemos utilizar macros:
+Sintaxe:
+```C
+#define MACRO(argumento) (operação)
+```
+Calculando o tamanho da array:
+```C
+#define CAL_ARRAY_LEN(x) (sizeof(x)/sizeof(x[0]))
+```
+Assim, quando quisermos saber o tamanho de uma array, não precisamos toda vez escrever "sizeof(x)/sizeof(x[0])", pq o macro já irá fazer isto para nós. Lembre-se, o macro é literalmente só uma substituição de texto, mas de qualquer forma, ainda torna o código muito mais legível.
+
+Exemplo de macro que pega um maior entre dois números:
+```C
+#define MAX(a,b) (a > b ? a : b)
+```
+Observe porém, que usar macros tem alguns pontos negativos. Estamos fazendo uma substituição de texto, o que pode ser meio problemático às vezes, exemplo (considere o macro MAX já definido):
+```C
+int a = 1, b = 5;
+printf("%d",MAX(a,b++));
+```
+Queremos saber qual o maior número, se é a(1) ou b++(6), mas quando rodarmos o programa, teremos 7....
+Como? Simples, o macro irá  extender para:
+```C
+a > b++ ? a : b++;
+```
+Observer que temos duas vezes o incremento em b. Portanto, quando formos utilizar macros como funções, temos que tomar muito cuidado se formos utilizar operadores em suas inputs.
+
+Agora, indo para compilação condicional:
+```C
+#define LOG_INFO
+
+#ifdef SOME_MACRO
+	printf("SOME_MACRO existe \n");
+#endif
+
+#ifdef LOG_INFO
+	printf("LOG_INFO");
+#else
+	printf("Sem LOG");
+#endif
+```
+Veja que só irá ser compilado, e portanto só irá ser printado, LOG_INFO, pq é o único macro que temos.
+
+Mas o ifdef só funciona para verificar se um macro foi ou não definido. Podemos fazer mais umas baguncinhas:
+```C
+#define BUFFER_SIZE 1024
+
+#if BUFFER_SIZE > 2048
+	printf("MAS QUE BUFFERZAÇO");
+#else
+	printf("Mas que bufferzinho mixuruca");
+#endif
+```
+Veja que a depender do tamanho do buffer, iremos compilar uma coisa ou outra.
+Isso é muito útil para fazer programas mais leves e econômicos, porque não tem necessidade do programa ser capaz de lidar com um buffer de tamanho x e y se ele sempre será de tamanho x, então fazemos esta compilação condicional e ganhamos mais espaço.
+
+# File I/O
+
+Temos muitas funções massas pra explorar arquivos em memória permanente na biblioteca stdio.h para abrir, ler, modificar e fechar arquivos. Suas funções (e mais uns macros e tipos de variável, além de funções como printf e scanf) podem ser encontrados aqui: https://www.tutorialspoint.com/c_standard_library/stdio_h.htm e mais completo (mas mais complicado tbm) aqui: https://en.cppreference.com/w/c/io
+
+Podemos utilizar para abrir um arquivo o fopen(), para fechar fclose().
+Podemos ler um arquivo com fgetc(), getc() ou ainda fread().
+Podemos escrever num arquivo com fwrite().
+Podemos "navegar" dentro do arquivo com ftell(), fgetpos(), fseek(),fsetpos(),rewind().
+
+Aplicando isto tudo num programão de exemplo que copiei da aula excessivamente comentado pra ter certeza que vou entender tudo:
+```C
+#include <stdio.h>
+#include <stdlib.h>
+
+#define SAMPLES_LEN 100
+#define DOWNSAMPLE_K 10
+
+void program_failure(char str[]){ //função que fará o error handling do código
+    perror(str); //printamos o erro
+    exit(EXIT_FAILURE); //quitamos do programa com um exit failure
+}
+
+int main(){
+    //Criando e populando uma array
+    double samples[SAMPLES_LEN];
+    for (int i = 0; i < SAMPLES_LEN; i++){
+        samples[i] = (i+1)/10.0; //colocando a casa decimal no dez, forçamos a divisão a resultar uma double
+        printf("%.1f, ", samples[i]);
+    }
+    printf("\n-----\n");
+
+    //Vamos agora escrever os samples num arquivo
+    //abrindo um arquivo em binary write mode, veja que neste modo, caso o arquivo não exista, ele será criado.
+    FILE *fp = fopen("samples.bin","wb");
+    if(!fp){ //error handling
+        program_failure("File opening error");
+    }
+    //escrevendo no arquivo, fwrite(buffer, size, count, stream)
+    size_t written_count = fwrite(samples, sizeof(samples[0]),SAMPLES_LEN,fp);
+    //verificando se a quantidade de elementos escritos é igual ao tamanho da array
+    //Se não for, temos algum erro
+    if (written_count != SAMPLES_LEN){
+        program_failure("File writing failed");
+    }
+    fclose(fp); //fechando a stream
+
+     //vamos agora ler o arquivo, mas vamos pegar somente os itens dos indexes multiplos de 10, então:
+    //10,20... Na prática, como a array começa em 0, serão 9,19...
+    double sam_k[SAMPLES_LEN/DOWNSAMPLE_K]; //iniciando a array onde teremos os valores
+    fp = fopen("samples.bin", "rb");//iniciando o arquivo binário em modo de leitura
+    //lendo o bendito do arquivo já nos índices que queremos
+    for (int i = 0; i < SAMPLES_LEN/DOWNSAMPLE_K ; i++){
+        int offset = (DOWNSAMPLE_K-1) * sizeof(sam_k[0]);
+        if(fseek(fp,offset,SEEK_CUR) != 0){
+            program_failure("File seeking failure");
+        }
+        //lendo de fato o arquivo
+        size_t count = fread(&sam_k[i], sizeof(sam_k[0]), 1, fp);
+        //error handling
+        if (count != 1){
+            if(feof(fp)){
+                program_failure("Unexpected end of file");
+            }
+            else{
+                program_failure("Eror reading file");
+            }
+        }
+        //printando os elementos
+        printf("%.1f, ", sam_k[i]);
+    }
+    return EXIT_SUCCESS;
+}
+```
+
+# Modular Programming
+
+Tente pensar no programa num conjunto de módulos, não num blocão de código.
+
+Podemos fazer isto de duas formas, indo de grandes tarefas e as dividindo em problemas menores, ou ir agregando features simples até termos um programa show, estas metodologias são chamadas de "Top-Down" e "Bottom-Up", respectivamente.
+
+Alguns princípios da programação modular são:
+- Não queremos saber como o módulo funciona, estamos apenas interessados em fazer o interfaciamento com ele
+- Tarefas que trabalhem com os mesmos dados ou relacionados a mesma funcionalidade devem estar no mesmo módulo, evitando ao máxima a sobreposição de tarefas entre os módulos
+- Quando desenvolver o programa, pense que ela deverá manter sendo sempre atualizado, então pense em como facilitar esta atualização no futuro
+
+A implementação do módulo é sempre feita num arquivo .c, enquanto o interfaceamento ocorre por meio de cabeçalhos .h, utilizando o include para incluir os módulos.
+
+Observe, entretanto, que existe duas maneiras diferentes de utiliza o include:
+```C
+#include <stdlib.h> -> O preprocessor vai procurar pelo módulo nas pastas predefinidas do compilador
+
+#include "Meu_modulo.h" -> O preprocessor vai procurar pelo módulo na mesma pasta que o programa ou num diretório explícito
+```
+
+Criando exemplos:
+Definindo um módulos e suas funções (stack.c), observe que ele também tem que ter o include do seu cabeçalho:
+```C
+#include "stack.h"
+
+void push (int val) {/*code*/};
+int pop() {/*code*/};
+```
+Criando o cabeçalho (stack.h):
+```C
+void push(int val);
+int pop();
+```
+Utilizando o módulo na main.c:
+```C
+#include "stack.h"
+...
+```
+
+Bem, já sabemos que o código primeiro passa pro preprocessor, depois pelo compilador pra depois ser executado, certo? Errado, tem mais uma etapa. Após ser compilado, o arquivo passa pelo Linker, que realiza a ligação entre os pedaços de código, os módulos que foram gerados. É o Linker que vai acusar, por exemplo, caso tenhamos diversas definições pra um mesmo termo, por exemplo. Como resolvemos este problema? É considerada uma boa prática utilizar compilação dinâmica para manter o código seguro e evitar erros.
+
+Observe que quando formos buildar o programa, deveremos usar a task de buildar o diretório, e não somente o arquivo.
