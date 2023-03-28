@@ -1,3 +1,13 @@
+# Início
+Nunca esqueã do define que determina a frequência do micro:
+```C
+#define _XTAL_FREQ 4000000
+```
+Neste caso estamos utilizando 4MHz, mas pode ser outro valor
+
+Também sempre cuide dos configurations bits em Window>Target Memory Views>Configuration bits.
+Depois de gerar os defines, os cole no main.c
+# I/O
 |Registrador|Função|
 |--|--|
 |PORT|Responsável por armazeonar o valor de um pino I/O, seja ele saída ou entrada|
@@ -22,3 +32,5 @@ int pino_rb0;
 TRISBbits.TRISB0 = 1;
 pino_rb0 = PORTBbits.RB0;
 ```
+
+
