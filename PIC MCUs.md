@@ -74,4 +74,29 @@ TRISB0 = 1;
 pino_rb0 = RB0;
 ```
 
+Podemos fazer o interfaceamento de displays 7seg usando as gpios, utilizando uma porta inteira para controlar um display. Basta decidir se vamos utilizar alinhamento para a direita ou esquerda (já que o display tem 7 segmentos, mas temos 8 bits) e montar tudo.
+Se for alinhado para a direita, podemos utilizar o seguinte site para gerar o valor hexadecimal correspondente ao número, bastanto aplicar este valor ao PORT da saída para termos o valor.
+https://deepbluembedded.com/seven-segment-display-generator/
+Ex de código de minuteira (PIC16F877A):
+```C
+#include <xc.h>
+#include "config.h"
+int vals [11] = {0x3F,0x06,0x5B,0x4F,0x66,0x6D,0x7D,0x07,0x7F,0x6F,0x3F}; 
+void main(void) {
+    TRISB=0;
+    TRISC=0;
+    PORTB=0x3F;
+    PORTC=0x3F;
+    while(1){
+        for(int i=0;i<6;i++){
+            PORTC=vals[i];
+            for (int j=1;j<11;j++){
+                __delay_ms(1000);
+                PORTB=vals[j];
+            }
+        }
+    }
+    return;
+}
+```
 
