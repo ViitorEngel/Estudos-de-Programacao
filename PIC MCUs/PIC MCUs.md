@@ -100,3 +100,44 @@ void main(void) {
 }
 ```
 
+# Interrupt
+
+Viver só de polling é complicado. Às vezes, precisamos de uma interrupt.
+
+Antes de mais nada, temos que entender que o CI que estamos usando (PIC16F877A) não possuí interrupts vetorizadas, então, quando temos alguma interrupt, ele não faz ideia de onde veio, só sabe que veio.
+
+O esquemático do ckt de interrupts é o seguinte (pode variar de CI para CI, então procura no datasheet do que tu for usar):
+![[Interrupt_Circuitry_PIC16F.png]]
+Apesar de estar confuso, vou explicar com um exemplo. Imagine que queremos configurar uma interrupt vinda do Timer1, para configurar:
+- Setamos o bit TMR1IE (Timer1 interrupt enable)
+- Setamos o bit PEIE (Peripheral interrupt enable)
+- Setamos o bit GIE (Global interrupt enable)
+Desta forma, teremos uma interrupt na CPU quando o TMR1IF (também conhecido como flag do timer1) for acionado.
+Observe para alguns periféricos não precisamos acionar o PEIE.
+
+Detalhe, nunca esqueça de limpar a flag quando der alguma interrupt.
+O ISR (Interrupt Service Routine) deve serguir um passo a passo tipo:
+- Verifica a origem de interrupt (por meio da flag)
+- Faz o trabalho
+- Limpa a flag
+
+Por exemplo, vamos configurar uma interrupt do ADC para quando uma conversão é concluida e pra quando temos uma overflow no timer1:
+```C
+ADIE = 1;
+TMR1IE = 1;
+PEIE = 1;
+GIE = 1;
+
+void __interrupt() ISR(void){
+	if(TMR1IF==1){
+		//Faz a magia
+		TMR1IF=0; //limpa a flag
+	}
+	if(ADIF==1){
+	//Faz a magia
+	ADIF=0; //limpa a flag
+	}
+}
+```
+
+Muitas vezes, o sistema vai receber um monte de interrupts, então é crucial QUE ELAS SEJAM RÁPIDAS. Nunca use delays dentro de uma ISR.
