@@ -165,8 +165,8 @@ No modelo utilizado (PIC16F877A), temos 3 timers, com os seguintes esquemáticos
 	- 5 T0CS (Clock Source Select bit)
 		- 1 transition on T0CKl pin
 		- CLKO (internal instruction cycle clocl)
-	- 6 INTEDG
-	- 7 ~RBPU
+	- 6 INTEDG (coisa da PORTB)
+	- 7 ~RBPU (coisa da PORTB)
 ## Timer 1:
 - 16 bit core
 - Radeble/writable
@@ -186,7 +186,7 @@ No modelo utilizado (PIC16F877A), temos 3 timers, com os seguintes esquemáticos
 	- 3 T1OSCEN oscillator enable control bit
 		- 1 oscillator enabled
 		- oscillator shut-off
-	- 4-5 prescaler
+	- 4-5 prescaler (T1CKPS1:T1CKPS0)
 	- 6-7 unimplemented
 
 ## Timer 2
@@ -266,3 +266,197 @@ Observe que podemos ter alguns problemas aqui. Podemos querer exatamente 2 segun
 Vamos considerar que o sistema roda a 4MHz num timer de 16bit, prescaler 1:1 e queremos Tout=2s. Assumindo que TMR1=0 (começa do começo) e calculando para x, teremos X=30,52 overflows (nonsense).
 
 Observe porém, que 0,52 overflow equivale a 0,034 segundos (0,52 * 0,06553), sendo assim, basta substituir Tout por 0,034 na equação e resolver para TMR1, que será de 34002. Agora, basta carregar este valor para o TMR1 (o nome do registrador é literalmente TMR1, mamão com açúcar) no começo do código, antes de começar a contage, e na interrupt, sempre que tivermos uma overflow.
+
+# IRQ
+
+GPIOs com Interrupts massas
+No PIC 16F877A, é só o RB0.
+Precisamos determinar se a interrupt será em em borda de subida ou descida, podemos ver isso no OPTION_REG SRF, mais especificamente, no bit INTEDG:
+```C
+INTEDG = 1//subida
+```
+Daí ativamos o INTE  e GIE, evidentemente.
+Depois é só escrever o ISR Handler e tá feita a maracutaia.
+Exemplo de código bem simples:
+```C
+#include <xc.h>
+#include "config.h"
+void interrupt ISR()
+{
+  if (INTF == 1)   // Check The Flag
+  {
+    //  Toggle The Yellow LED
+    RC1 = ~RC1;
+    INTF = 0;  //  Clear The Flag
+  }
+}
+void main(void){
+  //--[ Configure The IO pins ]--
+  TRISC1 = 0;
+  TRISC2 = 0;
+  //--[ Configure The RB0 IRQ Interrupt ]--
+  INTEDG = 0;
+  INTE = 1;
+  GIE = 1;
+  // Create The Main loop
+  while(1)
+  {
+    // Green LED Blinking Routine
+    RC2 = 1;
+    __delay_ms(1000);
+    RC2 = 0;
+    __delay_ms(1000);
+  }
+}
+```
+
+## DICA EXTRA, GAMBIARRA PRA TER MAIS IRQs!
+Pegue um contador, carregue-o até o seu valor máximo menos -1, desta forma, você terá teoricamente uma interrupt acionada por um pino. Não é uma boa prática, mas pode ser útil eventualmente.
+
+# CCP
+Apresenta 3 modos, Capture, Compare e PWM
+Fazemos o controle por meio do CCPxCON SRF e mais alguns bits.
+
+## Capture
+Aqui, iremos pegar o valor de um timer quando algo acontecer em algum pino. Útil para medir o tempo de algum evento físico. Se usarmos o timer1, será o RC2, e podemos configurar isso direitinho do CCP1CON dos bits 0 ao 3 (vê o datasheet, tá bem explicadinho lá)
+Pra usar é bem fácil, basta configurar o timer certinho, daí configura o CCP1CON, configura as interrupts (CCP1IE e CCP1IF) e sempre que ocorrer o evento configurado, teremos uma interrupt, daí é só mandar braza.
+Veja que dependendo de como configuramos o TRISC, podemos ter duas opções diferentes de acionamento do Captures, se selecionarmos o pino como entrada, iremos usar algum sensor ou coisa parecida, se for uma saída, podemos escrever a PORT e acionar o Capture via software.
+Observe que o timer me questão deve estar ou em modo timer ou contador sincronizado, contador desincronizado pode não funcionar.
+EX (não é o código inteiro, só o que é necessário pro entendimento do coteúdo):
+```C
+// -- [[ Configure Timer1 To Operate In Timer Mode ]] --
+// Clear The Timer1 Register. To start counting from 0
+TMR1 = 0;
+// Choose the local clock source (timer mode)
+TMR1CS = 0;
+// Choose the desired prescaler ratio (1:1)
+T1CKPS0 = 0;
+T1CKPS1 = 0;
+```
+Versão alternativa pro modo contador
+```C
+//--[ Configure The Timer1 Module To Operate In Counter Mode ]--
+TMR1 = 0;
+// Choose the desired prescaler ratio (1:1)
+T1CKPS0 = 0;
+T1CKPS1 = 0;
+// Choose the extrenal clock source (counter mode)
+TMR1CS = 1;
+T1OSCEN = 1;
+// Enable Synchronization For Counter Mode
+T1SYNC = 0;
+```
+A partir de agora vale pros dois modos:
+```C
+//Ativa o timer1
+TMR1ON = 1;
+//--[ Configure The CCP1 Module To Operate in Capture Mode ]--
+CCP1M0 = x;
+CCP1M1 = x;
+CCP1M2 = x;
+CCP1M3 = x;
+//mude os "x" pros valores que tu quiser pro padrão de Capture desejado (são basicamente os bits do CCP1CON, vê o datasheet)
+
+// Enable CCP1 Interrupt
+CCP1IE = 1;
+PEIE = 1;
+GIE = 1;
+
+void interrupt ISR()
+{
+  if (CCP1IF)
+  {
+    // Do Some Stuff...
+    CCP1IF=0; //limpa a flag pra n dar problema
+  }
+}
+```
+
+## Compare
+O registrador CCPR1 é constantemente comparado ao TMR1 (que por ser um contador de 16 bits, é composto por 2 reg de 8, o TMR1L e o TMR1H), e quando os valores se encontram, podemos alterar o valor do pino RC2.
+Observe que se utilizado o modo contador, deve ser sincronizado.
+O negócio é bem explicadinho no datasshet, só dá uma olhada no registrador CCP1CON e no funcionamento do diagrama em blocos que tu vai entender direitinho.
+Ex:
+```C
+// -- [[ Configure Timer1 To Operate In Timer Mode ]] --
+// Clear The Timer1 Register. To start counting from 0
+TMR1 = 0;
+// Choose the local clock source (timer mode)
+TMR1CS = 0;
+// Choose the desired prescaler ratio (1:1)
+T1CKPS0 = 0;
+T1CKPS1 = 0;
+
+OU ENTÃO
+
+//--[ Configure The Timer1 Module To Operate In Counter Mode ]--
+TMR1 = 0;
+// Choose the desired prescaler ratio (1:1)
+T1CKPS0 = 0;
+T1CKPS1 = 0;
+// Choose the extrenal clock source (counter mode)
+TMR1CS = 1;
+T1OSCEN = 1;
+// Enable Synchronization For Counter Mode
+T1SYNC = 0;
+
+//ACIONANDO TIMER1
+TMR1ON = 1;
+//CARREGANDO O CCPR1
+CCPR1 = N;
+
+//--[ Configure The CCP1 Module To Operate in Compare Mode ]--
+CCP1M0 = x;
+CCP1M1 = x;
+CCP1M2 = x;
+CCP1M3 = x;
+
+// Enable CCP1 Interrupt
+CCP1IE = 1;
+PEIE = 1;
+GIE = 1;
+
+void interrupt ISR()
+{
+  if (CCP1IF)
+  {
+    // Do Some Stuff...
+    CCP1IF = 0;
+  }
+}
+```
+## PWM
+BORA FAZER FAZER O LED BRILHAR MASSA
+Primeiro setamos pra operar em PWM no CCPxCON, depois, a frequencia do PR, acionamos o timer com o prescaler e arrumarmos o DC com CCPR1L e CCP1CON<5:4>
+Podemos calcular a frequencia do PR:
+$$PWMperiod = [(PR2)+1] * 4 * Tosc * Timer2PreScalerValue$$
+Observe que nunca devemos encontra um PR<255, se for o caso, testamos com outro prescaler.
+Pra calcular o CCPR1L e o CCP1CON pra determinar o DC
+$$DC[s]=(CCPR1L:CCP1CON<5:4>) * Tosc * TMR2prescaler$$
+### EX: PWM 2KHz, Clock 4MHz e prescaler de 1:4 e DC de 70%
+$$1/2000=[(PR2)+1] * 4 * (1/4*10^6) * 4 => PR=124$$
+$$ PWMDC[s]=0.7 * (1/2000) => 0,00035$$
+$$0,00035=(CCPR1L:CCP1CON<5:4>) * (1/4*10^6) * 1:4 => CCPR1L:CCP1CON<5:4> = 350$$
+$$$$
+
+```C
+//--[ Configure The CCP1 Module For PWM Mode ]--
+CCP1M2 = 1;
+CCP1M3 = 1;
+TRISC2 = 0;  // RC2/CCP1(PWM) Output Pin
+
+//escreve o PR2
+PR2 = 124;
+
+// Set Timer2 Prescaler To Match The (1:4) Ratio
+T2CKPS0 = 1;
+T2CKPS1 = 0;
+
+//Setting CCPR1L:CCP1CON<5:4>
+CCP1CONbits.CCP1Y = (350) & 1; // Get bit-0 (The LSB)
+CCP1CONbits.CCP1X = (350) & 2; // Get bit-1
+CCPR1L = (350) >> 2;           // Move The 8 MSBs To CCPR1L register
+
+//Acionando timer 2
+TMR2ON = 1;
+```
