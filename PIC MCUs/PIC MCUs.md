@@ -437,8 +437,6 @@ $$DC[s]=(CCPR1L:CCP1CON<5:4>) * Tosc * TMR2prescaler$$
 $$1/2000=[(PR2)+1] * 4 * (1/4*10^6) * 4 => PR=124$$
 $$ PWMDC[s]=0.7 * (1/2000) => 0,00035$$
 $$0,00035=(CCPR1L:CCP1CON<5:4>) * (1/4*10^6) * 1:4 => CCPR1L:CCP1CON<5:4> = 350$$
-$$$$
-
 ```C
 //--[ Configure The CCP1 Module For PWM Mode ]--
 CCP1M2 = 1;
@@ -460,3 +458,114 @@ CCPR1L = (350) >> 2;           // Move The 8 MSBs To CCPR1L register
 //Acionando timer 2
 TMR2ON = 1;
 ```
+
+# EEPROM
+Memória não volátil interna. 256x8
+
+O controle é feito por meio de 6 registradores:
+- EECON1: SRF que faz o controle da parada
+- EECON2: Não é um SRF físico, e é usado para EEPROM 5-step write sequence
+- EEDATA: Segura a info de 8 bits pra ser gravada/lida
+- EEDATAH: Segura, junto com o EEDATA, 14 bits pra ser gravado/lido
+- EEADR: Segura o endereço de 8 bits sendo acessado
+- EEADRH: Junto com o EEADR, segura o endereõ de 13 bits sendo acessado
+
+O método de leitura/escrita da memória pode mudar de MCU para MCU. Felizmante, o procedimento costuma estar descrito no datasheet.
+Eu vou me reservar ao direito de não explicar o passo a passo aqui, porque está extremamente bem detalhado no [datasheet](https://ww1.microchip.com/downloads/en/devicedoc/39582b.pdf) na página 37.
+Sendo assim, aqui temos somente as instruções convertidas em código no tutorial:
+```C
+void EEPROM_Write(uint8_t Address, uint8_t Data)
+{
+  uint8_t GIE_State;     // Variable To Store The Last GIE State
+  while(EECON1bits.WR);  // Waits Until Last Attempt To Write Is Finished
+  EEADR = Address;       // Writes The Addres To Which We'll Wite Our Data
+  EEDATA = Data;         // Write The Data To Be Saved
+  EECON1bits.EEPGD = 0;  // Cleared To Point To EEPROM Not The Program Memory
+  EECON1bits.WREN = 1;   // Enable The Operation !
+  GIE_State = GIE;       // Store The GIE State
+  INTCONbits.GIE = 0;    // Disable All Interrupts Untill Writting Data Is Done
+  EECON2 = 0x55;         // Part Of Writing Mechanism..
+  EECON2 = 0xAA;         // Part Of Writing Mechanism..
+  EECON1bits.WR = 1;     // Part Of Writing Mechanism..
+  GIE = GIE_State;       // Restore The Interrupts Last State
+  EECON1bits.WREN = 0;   // Disable The Operation
+  EECON1bits.WR = 0;     // Ready For Next Writting Operation
+}
+
+uint8_t EEPROM_Read(uint8_t Address)
+{
+  uint8_t Data;
+  EEADR = Address;       // Write The Address From Which We Wonna Get Data
+  EECON1bits.EEPGD = 0;  // Cleared To Point To EEPROM Not The Program Memory
+  EECON1bits.RD = 1;     // Start The Read Operation
+  Data = EEDATA;         // Read The Data
+  return Data;
+}
+```
+
+# UART
+Comunicação serial muito massa
+
+Tem uma diferença entre USART e UART, e não vou abordar todos os temas aqui, mas basicamente, a UART não contém sincronização, então o baudrate do emissor e do receptor devem estar igualados, já no caso da USART, o receptor irá utilzar o clock do emissor, então o baudrate é inútil. Via de regra, a USART é bem mais rápida, potente e pancada que a UART.
+
+O pacote de dados do protocolo UART é o seguinte:
+- Start bit
+- Data Frame (5 a 9 bits)
+- Bit de Paridade
+- Stop Bit
+
+Quando for uma programar, veja o BaudRate Formula no datasheet (página 115 do PIC16F877A), que irá ser o valor a ser colocado no SPBRG, um timer de 8bits que irá gerar o sinal de baudrate.
+
+Os SFRs usados na UART são:
+- TXSTA transmitter status and control register
+- RCSTA receiver status and controleregister
+- SPBRH baud rate generator register
+- TXREG transmitter buffer size
+- RCREG receiver buffer register
+
+Novamente, o procedimento de transmissão está todo muito bem descrito no datasheet (no caso do pic16f877A, páginas 118 e 120 para a transmissão Assíncrona), o único adendo que adicionaria é que você tem que configurar as portas usadas como saída/entrada pelos TRIS.
+
+Exemplo de comunicação simples:
+```C
+//TRANSMISSÃO
+BRGH = 1; //baudrate de alta velocidade, ajuda a diminuir o erro do baudrate (nem sempre) (tabelas página 116 do datasheet)
+SPBRG = //valor calculado pela equação do baudrate (datasheet)
+//habilitando as portas seriais assíncronas
+SYNC = 0;
+SPEN = 1;
+//setando os pinos RX/TX
+TRISC6 = 1;
+TRISC7 = 1;
+//Habilitando UART
+TXEN = 1;
+//Carregando a informação para o TXREG
+TXREG = data;
+//Transmissão concluida..
+
+//RECEPÇÃO
+BRGH = 1; //baudrate de alta velocidade, ajuda a diminuir o erro do baudrate (nem sempre) (tabelas página 116 do datasheet)
+SPBRG = //valor calculado pela equação do baudrate (datasheet)
+//habilitando as portas seriais assíncronas
+SYNC = 0;
+SPEN = 1;
+//setando os pinos RX/TX
+TRISC6 = 1;
+TRISC7 = 1;
+//UART reiciving interrupt
+RCIE = 1;  // UART Receving Interrupt Enable Bit
+PEIE = 1;  // Peripherals Interrupt Enable Bit
+GIE = 1;   // Global Interrupt Enable Bit
+//Enable UART Data Reception
+CREN = 1;  // Enable Data Reception
+
+//Handler que cata a informação
+void interrupt ISR (void)
+{
+  if (RCIF == 1)
+  {
+    Destination = RCREG;  // Read The Received Data Buffer
+    RCIF = 0;             // Clear The Flag
+  }
+}
+```
+
