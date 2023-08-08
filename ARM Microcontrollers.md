@@ -51,5 +51,5 @@ S-BUS: System Bus (carrega tanto dados quanto instruções)
   ![image](https://github.com/ViitorEngel/Estudos-de-Programacao/assets/124899227/dda61202-9a7e-43ae-ae42-3724da801a62)
 
 # Clocks
-Por padrão, o clock da MCU será o RC HSI (High Freq Internal Osc RC).
-As configurações do clock são normalmente feitas pelos registradores do RCC
+- Por padrão, o clock da MCU será o RC HSI (High Freq Internal Osc RC).
+- As configurações do clock são normalmente feitas pelos registradores do RCC (no CUBE IDE tu pode até fuçar nele na aba "system" com uma GUI)
